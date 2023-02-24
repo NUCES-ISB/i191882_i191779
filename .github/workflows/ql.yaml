@@ -13,6 +13,6 @@ jobs:
           fetch-depth: 2
           languages: cpp, python
           queries: +security-and-quality
-      - uses: github/codeql-action/autobuild@v1
-      - uses: github/codeql-action/analyze@v1
+      - uses: github/codeql-action/autobuild@v2
+      - uses: github/codeql-action/analyze@v2
       
