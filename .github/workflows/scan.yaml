@@ -40,8 +40,26 @@ jobs:
     # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
+      
+    - name: Set up Python environment
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
 
-    - run: |
-       dotnet build csharp
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Build Python project
+      run: python setup.py build
+
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@main
+      with:
+        language: python
+        query: security-queries/*.ql
+
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v1
+      with:
+        sarif_file: codeql-results.sarif
+      
