@@ -11,24 +11,24 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         languages: python
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+      uses: github/codeql-action/autobuild@v2
       with:
         language: python
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2
       with:
         language: python
         query: security-queries/*.ql
         # The security-queries/*.ql specifies the path to the CodeQL queries that will be used to analyze the code.
 
     - name: Upload SARIF Results
-      uses: github/codeql-action/upload-sarif@v1
+      uses: github/codeql-action/upload-sarif@v2
       with:
         # The file path where the results will be stored.
         sarif_file: codeql-results.sarif
