@@ -50,7 +50,7 @@ jobs:
       run: pip install -r requirements.txt
 
     - name: Build Python project
-      run: python Benguluru House Price Dataset.ipynb build
+      run: python house prediction code/Benguluru House Price Dataset.ipynb build
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@main
