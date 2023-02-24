@@ -1,159 +1,65 @@
-name: Test Python Package Installation
+name: "CodeQL"
 
 on:
   push:
-    branches: [i191779]
+    branches: [ "i191779" ]
   pull_request:
-    # Run checks on reopened draft PRs to support triggering PR checks on draft PRs that were opened
-    # by other workflows.
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      # Changes to this workflow.
-      - '.github/workflows/python-deps.yml'
-      # Changes to the Python package installation scripts and their tests.
-      - 'python-setup/**'
-      # Changes to the default CodeQL bundle version.
-      - '**/defaults.json'
+    # The branches below must be a subset of the branches above
+    branches: [ "master" ]
   schedule:
-    # Weekly on Monday.
-    - cron: '0 0 * * 1'
-  workflow_dispatch:
+    - cron: '25 23 * * 4'
 
 jobs:
-  test-setup-python-scripts:
-    timeout-minutes: 45
-    runs-on: ${{ matrix.os }}
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     strategy:
-        fail-fast: false
-        matrix:
-          os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
-          python_deps_type: [pipenv, poetry, requirements, setup_py]
-          python_version: [3]
-
-
-    env:
-      PYTHON_DEPS_TYPE: ${{ matrix.python_deps_type }}
-      PYTHON_VERSION: ${{ matrix.python_version }}
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
+        # Use only 'java' to analyze code written in Java, Kotlin or both
+        # Use only 'javascript' to analyze code written in JavaScript, TypeScript or both
+        # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
 
     steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
+    # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: ./init
-      id: init
+      uses: github/codeql-action/init@v2
       with:
-        tools: latest
-        languages: python
-        setup-python-dependencies: false
+        languages: ${{ matrix.language }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        # By default, queries listed here will override any specified in a config file.
+        # Prefix the list here with "+" to use these queries and those in the config file.
 
-    - name: Test Auto Package Installation
-      run: |
-        set -x
-        $GITHUB_WORKSPACE/python-setup/install_tools.sh
-        cd $GITHUB_WORKSPACE/python-setup/tests/${PYTHON_DEPS_TYPE}/requests-${PYTHON_VERSION}
-        case ${{ matrix.os }} in
-            ubuntu-20.04*)     basePath="/opt";;
-            ubuntu-22.04*)     basePath="/opt";;
-            macos-latest*)    basePath="/Users/runner";;
-        esac
-        echo ${basePath}
-        $GITHUB_WORKSPACE/python-setup/auto_install_packages.py "$(dirname ${{steps.init.outputs.codeql-path}})"
-    - name: Setup for extractor
-      run: |
-        echo $CODEQL_PYTHON
-        # only run if $CODEQL_PYTHON is set
-        if [ ! -z $CODEQL_PYTHON ]; then
-            $GITHUB_WORKSPACE/python-setup/tests/from_python_exe.py $CODEQL_PYTHON;
-        fi
-    - name: Verify packages installed
-      run: |
-        $GITHUB_WORKSPACE/python-setup/tests/check_requests_2_26_0.sh ${PYTHON_VERSION}
-  # This one shouldn't fail, but also won't install packages
-  test-setup-python-scripts-non-standard-location:
-    runs-on: ${{ matrix.os }}
-    strategy:
-        fail-fast: false
-        matrix:
-          os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+        # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+        # queries: security-extended,security-and-quality
 
-    steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v3
 
-    - name: Initialize CodeQL
-      uses: ./init
-      id: init
+    # Autobuild attempts to build any compiled languages  (C/C++, C#, Go, or Java).
+    # If this step fails, then you should remove it and run the build manually (see below)
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    # ℹ️ Command-line programs to run using the OS shell.
+    # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+
+    #   If the Autobuild fails above, remove it and uncomment the following three lines.
+    #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
+
+    # - run: |
+    #     echo "Run, Build Application using script"
+    #     ./location_of_script_within_repo/buildscript.sh
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
       with:
-        tools: latest
-        languages: python
-        setup-python-dependencies: false
-
-    - name: Test Auto Package Installation
-      run: |
-        set -x
-        $GITHUB_WORKSPACE/python-setup/install_tools.sh
-        cd $GITHUB_WORKSPACE/python-setup/tests/requirements/non-standard-location
-        case ${{ matrix.os }} in
-            ubuntu-20.04*)     basePath="/opt";;
-            ubuntu-22.04*)     basePath="/opt";;
-            macos-latest*)    basePath="/Users/runner";;
-        esac
-        echo ${basePath}
-        $GITHUB_WORKSPACE/python-setup/auto_install_packages.py "$(dirname ${{steps.init.outputs.codeql-path}})"
-    - name: Setup for extractor
-      run: |
-        echo $CODEQL_PYTHON
-        # only run if $CODEQL_PYTHON is set
-        if [ ! -z $CODEQL_PYTHON ]; then
-            $GITHUB_WORKSPACE/python-setup/tests/from_python_exe.py $CODEQL_PYTHON;
-        fi
-    - name: Verify packages installed
-      run: |
-        test -z $LGTM_INDEX_IMPORT_PATH
-  test-setup-python-scripts-windows:
-    runs-on: windows-latest
-    strategy:
-        fail-fast: false
-        matrix:
-          python_deps_type: [pipenv, poetry, requirements, setup_py]
-          python_version: [3]
-
-    env:
-      CODEQL_ACTION_TEST_MODE: true
-      PYTHON_DEPS_TYPE: ${{ matrix.python_deps_type }}
-      PYTHON_VERSION: ${{ matrix.python_version }}
-
-    steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v3
-
-    - uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python_version }}
-
-    - name: Initialize CodeQL
-      id: init
-      uses: ./init
-      with:
-        tools: latest
-        languages: python
-        setup-python-dependencies: false
-
-    - name: Test Auto Package Installation
-      env:
-        CODEQL_PATH: ${{ steps.init.outputs.codeql-path }}
-      run: |
-        $cmd = $Env:GITHUB_WORKSPACE + "\\python-setup\\install_tools.ps1"
-        powershell -File $cmd
-        cd $Env:GITHUB_WORKSPACE\\python-setup/tests/$Env:PYTHON_DEPS_TYPE/requests-$Env:PYTHON_VERSION
-        $codeql_dist = (get-item $Env:CODEQL_PATH).Directory.FullName
-        py -3 $Env:GITHUB_WORKSPACE\\python-setup\\auto_install_packages.py $codeql_dist
-    - name: Setup for extractor
-      run: |
-        echo $Env:CODEQL_PYTHON
-        py -3 $Env:GITHUB_WORKSPACE\\python-setup\\tests\\from_python_exe.py $Env:CODEQL_PYTHON
-    - name: Verify packages installed
-      run: |
-        $cmd = $Env:GITHUB_WORKSPACE + "\\python-setup\\tests\\check_requests_2_26_0.ps1"
-        powershell -File $cmd $Env:PYTHON_VERSION
+        category: "/language:${{matrix.language}}"
