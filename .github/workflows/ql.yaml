@@ -15,3 +15,4 @@ jobs:
           queries: +security-and-quality
       - uses: github/codeql-action/autobuild@v1
       - uses: github/codeql-action/analyze@v1
+      
